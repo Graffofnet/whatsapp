@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>VoiceChat</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, sans-serif;
+    background: #0b141a;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+  .phone {
+    width: 100%;
+    max-width: 420px;
+    height: 100vh;
+    max-height: 900px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    background: #0b141a;
+  }
+
+  /* ============ TOP BAR ============ */
+  .topbar {
+    background: #202c33;
+    color: #aebac1;
+    padding: 10px 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 30;
+    box-shadow: 0 1px 3px rgba(0,0,0,.35);
+    position: relative;
+    min-height: 56px;
+  }
+  .icon-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #aebac1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background .15s, color .15s, transform .12s;
+    flex-shrink: 0;
+    padding: 0;
+    position: relative;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,.06); color: #e9edef; }
+  .icon-btn:active { background: rgba(255,255,255,.1); transform: scale(.92); }
+  .icon-btn svg { width: 22px; height: 22px; fill: currentColor; display: block; transition: transform .2s ease; }
+
+  /* Hamburger */
+  .hamburger { }
+
+  /* Home */
+  .home-btn { }
+  .home-btn.active {
+    color: #00a884;
+  }
+
+  /* Lock — "запомни мой id" */
+  .lock-btn.remembered {
+    color: #00a884;
+  }
+  .lock-btn.remembered svg {
+    animation: lockBounce .5s cubic-bezier(.34,1.56,.64,1);
+  }
+  .lock-btn.remembered::after {
+    content: "";
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 8px; height: 8px;
+    background: #00a884;
+    border-radius: 50%;
+    border: 2px solid #202c33;
+    box-shadow: 0 0 6px rgba(0,168,132,.9);
+  }
+  @keyframes lockBounce {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.35) rotate(-8deg); }
+    70%  { transform: scale(.92) rotate(4deg); }
+    100% { transform: scale(1) rotate(0); }
+  }
+
+  .top-title {
+    color: #e9edef;
+    font-size: 16px;
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    margin-left: 4px;
+  }
+  .top-title small {
+    display: block;
+    font-size: 12px;
+    color: #8696a0;
+    font-weight: 400;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Close — SVG 30×30 */
+  .topbar-close {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #8696a0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    transition: background .15s, color .15s;
+  }
+  .topbar-close:hover { background: rgba(255,255,255,.06); color: #e9edef; }
+  .topbar-close:active { background: rgba(255,255,255,.1); }
+  .topbar-close svg { width: 30px; height: 30px; fill: currentColor; display: block; }
+
+  /* ============ MESSAGES ============ */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    scroll-behavior: smooth;
+    transition: background-color .35s ease, background-image .35s ease;
+    background-color: #0b141a;
+    background-attachment: local;
+    position: relative;
+  }
+  .messages::-webkit-scrollbar { width: 6px; }
+  .messages::-webkit-scrollbar-thumb { background: #2a3942; border-radius: 3px; }
+
+  .date-divider {
+    align-self: center;
+    background: rgba(24,34,41,.85);
+    color: #8696a0;
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    margin: 8px 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,.3);
+    backdrop-filter: blur(4px);
+  }
+  .join-notice {
+    align-self: center;
+    background: rgba(0,168,132,.16);
+    color: #06cf9c;
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    margin: 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(0,168,132,.3);
+    animation: slideIn .3s ease;
+  }
+  .join-notice svg { width: 14px; height: 14px; fill: currentColor; }
+
+  .msg {
+    max-width: 82%;
+    padding: 6px 9px;
+    border-radius: 5px;
+    position: relative;
+    animation: slideIn .22s ease;
+    word-wrap: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,.3);
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: pointer;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .msg.in  { align-self: flex-start; background: #202c33; }
+  .msg.out { align-self: flex-end;   background: #005c4b; }
+
+  .msg.deleting { opacity: 0; transform: scale(.85); }
+  .msg.deleted {
+    background: #182229 !important;
+    color: #8696a0;
+    font-style: italic;
+    cursor: default;
+  }
+  .deleted-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 2px 3px 0;
+    min-width: 190px;
+    font-size: 14px;
+  }
+  .deleted-content svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; opacity: .8; }
+  .msg.deleted .time { color: #8696a0; }
+  .msg.deleted .time .ticks { display: none; }
+
+  .msg .time {
+    font-size: 11px;
+    color: #8696a0;
+    margin-left: 8px;
+    float: right;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    line-height: 1;
+  }
+  .msg.out .time { color: #a0c8bd; }
+  .msg.out .time .ticks { color: #53bdeb; font-size: 13px; letter-spacing: -3px; margin-left: 2px; }
+
+  /* ============ VOICE BUBBLE ============ */
+  .voice-bubble {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 210px;
+    padding: 4px 2px 4px 0;
+  }
+  .play-btn {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #8696a0;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: color .15s, transform .1s;
+    padding: 0;
+  }
+  .msg.out .play-btn { color: #a0c8bd; }
+  .play-btn:hover { color: #e9edef; }
+  .play-btn:active { transform: scale(.9); }
+  .play-btn svg { width: 26px; height: 26px; fill: currentColor; }
+
+  .waveform {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 2.5px;
+    height: 28px;
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  .wave-bar {
+    flex: 1;
+    min-width: 2px;
+    max-width: 3px;
+    background: #8696a0;
+    border-radius: 2px;
+    transition: background .12s;
+    opacity: .75;
+  }
+  .msg.out .wave-bar { background: #a0c8bd; }
+  .wave-bar.played { background: #e9edef; opacity: 1; }
+  .msg.out .wave-bar.played { background: #d6f5ea; }
+
+  .voice-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    min-width: 42px;
+  }
+  .voice-duration {
+    font-size: 11px;
+    color: #8696a0;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .msg.out .voice-duration { color: #a0c8bd; }
+  .mic-icon-mini { width: 13px; height: 13px; color: #53bdeb; opacity: .9; }
+
+  /* ============ RECORD BUTTON ============ */
+  .recorder-panel {
+    background: #202c33;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-top: 1px solid #2a3942;
+    flex-shrink: 0;
+    min-height: 76px;
+    z-index: 20;
+  }
+  .record-btn-big {
+    width: 100%;
+    background: #00a884;
+    color: #fff;
+    border: none;
+    border-radius: 28px;
+    padding: 14px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background .18s, transform .1s, box-shadow .18s;
+    box-shadow: 0 3px 10px rgba(0,168,132,.28);
+    min-height: 52px;
+    overflow: hidden;
+    position: relative;
+  }
+  .record-btn-big:hover { background: #06cf9c; }
+  .record-btn-big:active { transform: scale(.98); }
+  .record-btn-big svg { width: 22px; height: 22px; fill: currentColor; flex-shrink: 0; }
+  .record-btn-big.recording {
+    background: #ff4d4d;
+    box-shadow: 0 3px 14px rgba(255,77,77,.45);
+  }
+  .record-btn-big.recording:hover { background: #ff4d4d; }
+
+  .record-btn-big.locked {
+    background: #e53935;
+    animation: lockedPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes lockedPulse {
+    0%, 100% { box-shadow: 0 3px 14px rgba(255,77,77,.45); }
+    50%      { box-shadow: 0 3px 28px rgba(255,77,77,.9); }
+  }
+  .lock-indicator {
+    width: 18px; height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #fff;
+    animation: lockIn .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  .lock-indicator svg { width: 16px; height: 16px; fill: currentColor; }
+  @keyframes lockIn {
+    from { transform: scale(0) rotate(-180deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg);    opacity: 1; }
+  }
+
+  .rec-timer {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    display: inline-flex;
+    align-items: center;
+  }
+  .rec-timer::before {
+    content: "";
+    display: inline-block;
+    width: 9px; height: 9px;
+    background: #fff;
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  .live-wave {
+    display: flex;
+    align-items: center;
+    gap: 2.5px;
+    height: 26px;
+    flex: 1;
+    max-width: 140px;
+    justify-content: center;
+  }
+  .live-bar {
+    flex: 1;
+    max-width: 4px;
+    background: rgba(255,255,255,.85);
+    border-radius: 2px;
+    transition: height .07s linear;
+  }
+
+  .hint {
+    position: absolute;
+    bottom: 96px;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: rgba(0,0,0,.85);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s, transform .25s;
+    white-space: nowrap;
+    z-index: 60;
+    backdrop-filter: blur(6px);
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .typing {
+    align-self: flex-start;
+    background: #202c33;
+    padding: 14px 18px;
+    border-radius: 5px;
+    display: flex;
+    gap: 5px;
+    animation: slideIn .22s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+  .typing span {
+    width: 8px; height: 8px;
+    background: #8696a0;
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: .2s; }
+  .typing span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: .5; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  /* ============ МЕНЮ УДАЛЕНИЯ ============ */
+  .msg-menu {
+    position: fixed;
+    background: #233138;
+    border-radius: 10px;
+    padding: 5px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.55);
+    z-index: 1000;
+    animation: menuIn .16s ease;
+    min-width: 170px;
+    border: 1px solid rgba(255,255,255,.05);
+  }
+  @keyframes menuIn {
+    from { opacity: 0; transform: scale(.9) translateY(-4px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .msg-menu-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: transparent;
+    border: none;
+    color: #e9edef;
+    padding: 11px 14px;
+    font-size: 15px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 7px;
+    width: 100%;
+    text-align: left;
+    transition: background .15s;
+  }
+  .msg-menu-btn:hover { background: #2a3942; }
+  .msg-menu-btn:active { background: #374a55; }
+  .msg-menu-btn svg { width: 18px; height: 18px; fill: #ff6b6b; flex-shrink: 0; }
+  .msg-menu-btn.danger { color: #ff8a8a; }
+
+  /* ============ DRAWER ============ */
+  .drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease;
+    z-index: 40;
+    backdrop-filter: blur(1px);
+  }
+  .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .drawer {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 300px;
+    max-width: 85%;
+    background: #111b21;
+    color: #e9edef;
+    transform: translateX(-102%);
+    transition: transform .28s cubic-bezier(.2,.8,.3,1);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 20px rgba(0,0,0,.5);
+  }
+  .drawer.open { transform: translateX(0); }
+
+  .drawer-header {
+    padding: 22px 20px 12px;
+    border-bottom: 1px solid #222d34;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .drawer-title { font-size: 17px; font-weight: 600; color: #e9edef; }
+  .drawer-sub { font-size: 12px; color: #8696a0; margin-top: 3px; }
+  .drawer-close {
+    background: transparent;
+    border: none;
+    color: #8696a0;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .drawer-close:hover { background: rgba(255,255,255,.06); color: #e9edef; }
+  .drawer-close svg { width: 18px; height: 18px; fill: currentColor; }
+
+  .drawer-body {
+    padding: 12px 12px 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .drawer-body::-webkit-scrollbar { width: 6px; }
+  .drawer-body::-webkit-scrollbar-thumb { background: #2a3942; border-radius: 3px; }
+
+  .user-card {
+    background: linear-gradient(135deg, #1a2b33 0%, #182229 100%);
+    border: 1px solid #24343d;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .user-card::before {
+    content: "";
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 90px; height: 90px;
+    background: radial-gradient(circle, rgba(0,168,132,.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .user-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00a884, #005c4b);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    color: #fff;
+    font-size: 17px;
+    flex-shrink: 0;
+    box-shadow: 0 3px 8px rgba(0,168,132,.35);
+    text-transform: uppercase;
+  }
+  .user-info { flex: 1; min-width: 0; }
+  .user-label {
+    font-size: 11px;
+    color: #8696a0;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .user-label .pin-badge {
+    font-size: 9px;
+    background: rgba(0,168,132,.2);
+    color: #06cf9c;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    display: none;
+  }
+  .user-card.remembered .pin-badge { display: inline-block; }
+  .user-id {
+    font-size: 14px;
+    color: #e9edef;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -.3px;
+  }
+  .user-copy {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,.06);
+    color: #8696a0;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background .15s, color .15s, transform .1s;
+  }
+  .user-copy:hover { background: rgba(0,168,132,.2); color: #00a884; }
+  .user-copy:active { transform: scale(.92); }
+  .user-copy svg { width: 16px; height: 16px; fill: currentColor; }
+  .user-copy.copied { background: rgba(0,168,132,.3); color: #06cf9c; }
+
+  .room-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(83,189,235,.1);
+    border: 1px solid rgba(83,189,235,.22);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: #8ed2f5;
+  }
+  .room-badge svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+  .room-badge .room-id {
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    color: #53bdeb;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+
+  .drawer-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: transparent;
+    border: none;
+    color: #e9edef;
+    padding: 14px 14px;
+    font-size: 15px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 10px;
+    width: 100%;
+    text-align: left;
+    transition: background .15s;
+    margin-bottom: 6px;
+  }
+  .drawer-item:hover { background: #1f2c33; }
+  .drawer-item:active { background: #2a3942; }
+  .drawer-item .item-icon {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .drawer-item .item-icon svg { width: 20px; height: 20px; fill: currentColor; }
+  .drawer-item.green .item-icon   { background: rgba(0,168,132,.16); color: #00a884; }
+  .drawer-item.blue .item-icon    { background: rgba(83,189,235,.14); color: #53bdeb; }
+  .drawer-item.amber .item-icon   { background: rgba(255,193,7,.14);  color: #ffc107; }
+  .drawer-item.violet .item-icon  { background: rgba(138,92,246,.16); color: #a78bfa; }
+
+  .drawer-item .item-text { flex: 1; min-width: 0; }
+  .drawer-item .item-text small {
+    display: block;
+    font-size: 12px;
+    color: #8696a0;
+    margin-top: 2px;
+    font-weight: 400;
+  }
+
+  .folder {
+    background: #182229;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .folder-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 14px;
+    background: transparent;
+    border: none;
+    color: #e9edef;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .folder-header:hover { background: #1f2c33; }
+  .folder-header .folder-icon {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(83,189,235,.14);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .folder-header .folder-icon svg { width: 20px; height: 20px; fill: #53bdeb; }
+  .folder-header .folder-label { flex: 1; text-align: left; }
+  .folder-header .folder-count {
+    font-size: 12px;
+    color: #8696a0;
+    font-weight: 400;
+    margin-left: 6px;
+  }
+  .folder-header .folder-arrow {
+    width: 18px; height: 18px;
+    fill: #8696a0;
+    transition: transform .25s ease;
+    flex-shrink: 0;
+  }
+  .folder.open .folder-header .folder-arrow { transform: rotate(180deg); }
+
+  .folder-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .35s ease;
+  }
+  .folder.open .folder-content { max-height: 1200px; }
+
+  .bg-grid {
+    padding: 8px 12px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .bg-tile {
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    background: #111b21;
+    transition: border-color .2s, transform .12s;
+    position: relative;
+  }
+  .bg-tile:hover { transform: translateY(-2px); }
+  .bg-tile.active { border-color: #00a884; }
+  .bg-tile.active::after {
+    content: "✓";
+    position: absolute;
+    top: 6px; right: 8px;
+    background: #00a884;
+    color: #fff;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  }
+  .bg-preview {
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    position: relative;
+    background-size: cover;
+    background-position: center;
+  }
+  .bg-preview .mini-in, .bg-preview .mini-out {
+    position: absolute;
+    height: 6px;
+    border-radius: 2px;
+  }
+  .bg-preview .mini-in  { width: 40%; background: #202c33; top: 40%;    left: 8%;  }
+  .bg-preview .mini-out { width: 32%; background: #005c4b; bottom: 25%; right: 8%; }
+  .bg-tile-name {
+    padding: 7px 8px;
+    font-size: 11px;
+    color: #d1d7db;
+    text-align: center;
+    background: #111b21;
+  }
+  .bg-tile.active .bg-tile-name { color: #00a884; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ============ TOP BAR ============ -->
+  <div class="topbar">
+    <button class="icon-btn hamburger" id="menuBtn" aria-label="Меню">
+      <svg viewBox="0 0 24 24"><path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z"/></svg>
+    </button>
+
+    <div class="top-title" id="topTitle">
+      Общий чат
+      <small id="topSub">комната · general</small>
+    </div>
+
+    <!-- HOME — вернуться в общий чат -->
+    <button class="icon-btn home-btn" id="homeBtn" aria-label="Вернуться в общий чат" title="Вернуться в общий чат">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    </button>
+
+    <!-- LOCK — запомни мой ID -->
+    <button class="icon-btn lock-btn" id="lockBtn" aria-label="Запомни мой ID" title="Запомни мой ID">
+      <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm3 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+    </button>
+
+    <!-- CLOSE — очистить чат, SVG 30×30 -->
+    <button class="topbar-close" id="topbarClose" aria-label="Очистить чат" title="Очистить чат">
+      <svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+    </button>
+  </div>
+
+  <div class="messages" id="messages">
+    <div class="date-divider">Сегодня</div>
+  </div>
+
+  <div class="recorder-panel">
+    <button class="record-btn-big" id="recordBtn">
+      <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.92V21h2v-3.08A7 7 0 0019 11h-2z"/></svg>
+      <span>Нажми и запиши</span>
+    </button>
+  </div>
+
+  <div class="hint" id="hint">Удерживай кнопку для записи</div>
+
+  <div class="drawer-backdrop" id="backdrop"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div>
+        <div class="drawer-title">Меню</div>
+        <div class="drawer-sub">Действия и настройки чата</div>
+      </div>
+      <button class="drawer-close" id="drawerClose" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="user-card" id="userCard">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div class="user-info">
+          <div class="user-label">
+            Ваш ID
+            <span class="pin-badge">📌 сохранён</span>
+          </div>
+          <div class="user-id" id="userIdDisplay">—</div>
+        </div>
+        <button class="user-copy" id="copyUserId" title="Скопировать ID">
+          <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+        </button>
+      </div>
+
+      <div class="room-badge">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        <span>Комната:</span>
+        <span class="room-id" id="roomIdDisplay">general</span>
+      </div>
+
+      <!-- Создать личный чат -->
+      <button class="drawer-item green" id="newChatBtn">
+        <span class="item-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-6 9h-3v3h-2v-3H6V9h3V6h2v3h3v2z"/></svg>
+        </span>
+        <span class="item-text">
+          Создать личный чат
+          <small>новая комната на основе вашего ID</small>
+        </span>
+      </button>
+
+      <!-- Пригласить в комнату -->
+      <button class="drawer-item violet" id="inviteBtn">
+        <span class="item-icon">
+          <svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+        </span>
+        <span class="item-text">
+          Пригласить в комнату
+          <small>скопировать ссылку-приглашение</small>
+        </span>
+      </button>
+
+      <!-- Папка: Фоны чата -->
+      <div class="folder" id="bgFolder">
+        <button class="folder-header" id="folderToggle" aria-expanded="false">
+          <span class="folder-icon">
+            <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+          </span>
+          <span class="folder-label">Фоны чата <span class="folder-count">(7)</span></span>
+          <svg class="folder-arrow" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+        <div class="folder-content">
+          <div class="bg-grid" id="bgGrid"></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+/* ============================================================
+   0. ИДЕНТИФИКАТОРЫ
+   ============================================================ */
+const GENERAL_ROOM_ID = 'general';
+
+function getOrCreateUserId() {
+  let id = null;
+  try { id = localStorage.getItem('voicechat_user_id'); } catch(e) {}
+  if (!id || !/^usr_[a-z0-9]{6,}$/i.test(id)) {
+    id = 'usr_' + Math.random().toString(36).substring(2, 8) +
+                Math.random().toString(36).substring(2, 6);
+    try { localStorage.setItem('voicechat_user_id', id); } catch(e) {}
+  }
+  return id;
+}
+const USER_ID = getOrCreateUserId();
+
+function isIdRemembered() {
+  try { return localStorage.getItem('voicechat_id_remembered') === 'true'; } catch(e) { return false; }
+}
+function setRemembered(v) {
+  try { localStorage.setItem('voicechat_id_remembered', v ? 'true' : 'false'); } catch(e) {}
+}
+
+function getInitialRoomId() {
+  let room = null;
+  try {
+    const url = new URL(window.location.href);
+    room = url.searchParams.get('room');
+  } catch (e) {}
+  if (!room) {
+    try { room = localStorage.getItem('voicechat_last_room'); } catch(e) {}
+  }
+  return room || GENERAL_ROOM_ID;
+}
+let currentRoomId = getInitialRoomId();
+
+function persistRoom(id) {
+  try { localStorage.setItem('voicechat_last_room', id); } catch (e) {}
+  currentRoomId = id;
+  try {
+    const url = new URL(window.location.href);
+    if (id === GENERAL_ROOM_ID) url.searchParams.delete('room');
+    else url.searchParams.set('room', id);
+    history.replaceState({}, '', url.toString());
+  } catch (e) {}
+}
+function buildInviteLink(roomId = currentRoomId) {
+  const base = window.location.origin + window.location.pathname;
+  return `${base}?room=${encodeURIComponent(roomId)}`;
+}
+function getRoomLabel(roomId) {
+  if (roomId === GENERAL_ROOM_ID) return 'Общий чат';
+  if (roomId === USER_ID)          return 'Мой личный чат';
+  return `Чат ${roomId.substring(0, 12)}`;
+}
+function updateRoomUI() {
+  topTitle.childNodes[0].nodeValue = getRoomLabel(currentRoomId) + ' ';
+  topSub.textContent = 'комната · ' + currentRoomId;
+  const roomEl = document.getElementById('roomIdDisplay');
+  if (roomEl) roomEl.textContent = currentRoomId;
+  const ch = USER_ID.replace(/^usr_/, '').charAt(0).toUpperCase() || 'U';
+  document.getElementById('userAvatar').textContent = ch;
+  document.getElementById('userIdDisplay').textContent = USER_ID;
+
+  // Home button active state
+  const homeBtn = document.getElementById('homeBtn');
+  homeBtn.classList.toggle('active', currentRoomId === GENERAL_ROOM_ID);
+
+  // Lock remembered state
+  const lockBtn = document.getElementById('lockBtn');
+  const userCard = document.getElementById('userCard');
+  const remembered = isIdRemembered();
+  lockBtn.classList.toggle('remembered', remembered);
+  userCard.classList.toggle('remembered', remembered);
+}
+
+/* ============================================================
+   1. ФОНЫ
+   ============================================================ */
+const svgChalk = `<svg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'>
+<g fill='none' stroke='#ffffff' stroke-opacity='0.08' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'>
+  <path d='M40 30 c-4-6-14-3-14 5 c0 6 14 14 14 14 s14-8 14-14 c0-8-10-11-14-5z'/>
+  <path d='M130 30 l3 8 9 1 -7 6 2 9 -7-4 -7 4 2-9 -7-6 9-1z'/>
+  <circle cx='240' cy='55' r='14'/><circle cx='235' cy='51' r='1.6' fill='#fff'/><circle cx='245' cy='51' r='1.6' fill='#fff'/>
+  <path d='M233 60 q7 6 14 0'/>
+  <rect x='310' y='30' width='34' height='58' rx='5'/>
+  <circle cx='327' cy='80' r='2'/>
+  <path d='M310 55 l30 8 -18 12 -3 10z'/><path d='M310 55 l18 22'/>
+  <path d='M30 130 h36 a8 8 0 0 1 8 8 v14 a8 8 0 0 1 -8 8 h-26 l-10 8 v-8 a8 8 0 0 1 -8 -8 v-14 a8 8 0 0 1 8 -8z'/>
+  <path d='M110 145 q0-16 12-16 q12 0 12 16 l3 8 h-30z'/>
+  <circle cx='122' cy='158' r='3'/>
+  <path d='M180 130 a12 12 0 0 1 8 21 v3 h-16 v-3 a12 12 0 0 1 8 -21z'/>
+  <rect x='250' y='140' width='20' height='18' rx='2'/>
+  <path d='M254 140 v-5 a6 6 0 0 1 12 0 v5'/>
+  <path d='M290 130 l32 16 -4 4 -32 -16z'/>
+  <path d='M320 130 l-4 26 6-4 4 8 4-2 -4-8 8 0z'/>
+  <path d='M40 220 v10 M35 225 h10'/>
+  <circle cx='110' cy='230' r='14'/><circle cx='105' cy='226' r='1.6' fill='#fff'/><circle cx='115' cy='226' r='1.6' fill='#fff'/>
+  <path d='M103 234 q7 6 14 0'/>
+  <path d='M170 230 l40 12 -22 14 -6 14z'/><path d='M170 230 l18 26'/>
+  <path d='M240 230 q14-14 28 0 t28 0'/><path d='M240 260 q10-10 20 0 t20 0'/>
+  <circle cx='330' cy='245' r='12'/><path d='M330 233 v-8'/>
+  <path d='M50 300 q0-14 12-14 q12 0 12 14 l4 8 h-32z'/>
+  <circle cx='62' cy='314' r='3'/>
+  <rect x='120' y='290' width='26' height='22' rx='2'/><path d='M120 296 l13 8 13-8'/>
+  <circle cx='200' cy='305' r='12'/><path d='M200 297 v8 l6 4'/>
+  <path d='M250 295 l30 15 -4 3 -30 -15z'/>
+  <circle cx='330' cy='305' r='14'/><circle cx='324' cy='300' r='1.6' fill='#fff'/><circle cx='336' cy='300' r='1.6' fill='#fff'/>
+  <path d='M324 310 q6-4 12 0'/>
+</g>
+</svg>`;
+const svgGeo = `<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'>
+<rect width='240' height='240' fill='#ffffff'/>
+<g fill='#7cb56e'>
+  <circle cx='40' cy='30' r='16'/><circle cx='40' cy='30' r='8' fill='#ffffff'/>
+  <circle cx='200' cy='180' r='20'/><circle cx='200' cy='180' r='10' fill='#ffffff'/>
+</g>
+<g fill='none' stroke='#2a2a2a' stroke-width='1.3' stroke-linecap='round'>
+  <path d='M120 20 q8-10 16 0 t16 0'/><path d='M80 100 q10-8 20 0'/>
+  <path d='M40 180 v-20 M40 170 h-8'/><circle cx='160' cy='120' r='3'/>
+  <path d='M190 40 l14 0 M197 33 l0 14'/><path d='M20 100 l-6 10 -6-10z'/>
+  <path d='M150 220 l14 0 M157 213 l0 14'/><circle cx='220' cy='100' r='3'/>
+</g>
+<g fill='none' stroke='#7cb56e' stroke-width='1.3'>
+  <path d='M80 40 l12 20 -24 0z'/><path d='M100 180 l14 24 -28 0z'/>
+  <path d='M180 60 l10 16 -20 0z'/><path d='M30 130 a10 10 0 1 0 10-10'/>
+  <path d='M200 130 a14 14 0 1 1 0 20'/>
+</g>
+<g fill='none' stroke='#2a2a2a' stroke-width='0.9' stroke-dasharray='1 3'>
+  <rect x='200' y='120' width='30' height='22'/><rect x='20' y='200' width='26' height='22'/><rect x='140' y='150' width='24' height='20'/>
+</g>
+<g fill='none' stroke='#7cb56e' stroke-width='0.9' stroke-dasharray='1 3'>
+  <rect x='110' y='70' width='30' height='22'/><rect x='60' y='140' width='24' height='20'/>
+</g>
+<g fill='#7cb56e'>
+  <circle cx='100' cy='200' r='2.4'/><circle cx='110' cy='200' r='2.4'/><circle cx='120' cy='200' r='2.4'/>
+  <circle cx='170' cy='60' r='2.4'/><circle cx='180' cy='60' r='2.4'/><circle cx='175' cy='52' r='2.4'/>
+</g>
+<g fill='#2a2a2a'>
+  <path d='M50 30 l-4 8 8 0z'/><path d='M90 210 l-4 8 8 0z'/><path d='M220 30 l-4 8 8 0z'/>
+</g>
+</svg>`;
+const svgBlobs = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320'>
+<rect width='320' height='320' fill='#f6f2e8'/>
+<g fill='none' stroke='#7cb56e' stroke-width='1.4' stroke-linejoin='round' stroke-linecap='round'>
+  <path d='M20 40 q20-20 40-4 t30 10 q6 20-14 24 t-28-6 q-8-16-28-24z'/>
+  <path d='M100 20 q16-6 24 8 t-4 22 q-18 6-26-8t6-22z'/>
+  <path d='M180 30 q30-6 40 12 t-10 30 q-24 10-36-8 t6-34z'/>
+  <path d='M260 20 q20-8 30 8 t-6 26 q-24 4-30-10t6-24z'/>
+  <path d='M20 130 q30-16 46 4 t-6 34 q-26 12-40-8t0-30z'/>
+  <path d='M120 100 q14-10 22 2 t0 22 q-16 8-24-6 t2-18z'/>
+  <path d='M180 120 q24-12 36 6 t-10 26 q-20 8-30-6 t4-26z'/>
+  <path d='M250 110 q22-6 28 14 t-14 22 q-20 0-22-16t8-20z'/>
+  <path d='M40 200 q20-12 32 4 t-6 26 q-20 8-30-6t4-24z'/>
+  <path d='M120 180 q26-10 34 10 t-12 26 q-24 4-30-14t8-22z'/>
+  <path d='M200 190 q20-8 28 6 t-6 22 q-18 4-24-8t2-20z'/>
+  <path d='M270 200 q16-6 22 6 t-4 18 q-16 4-20-6t2-18z'/>
+  <path d='M20 260 q24-10 32 8 t-10 24 q-22 4-28-14t6-18z'/>
+  <path d='M110 250 q18-8 26 4 t-4 20 q-18 4-24-8t2-16z'/>
+  <path d='M190 250 q30-12 40 10 t-14 30 q-26 6-34-14t8-26z'/>
+  <path d='M280 260 q14-6 20 4 t-4 16 q-14 4-18-6t2-14z'/>
+  <path d='M160 60 q10-4 14 6 t-4 12 q-10 2-12-6t2-12z'/>
+  <path d='M70 90 q10-4 14 6 t-4 12 q-10 2-12-6t2-12z'/>
+  <path d='M230 300 q10-4 14 6 t-4 12 q-10 2-12-6t2-12z'/>
+</g>
+</svg>`;
+const svgBlue = `<svg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'>
+<defs><linearGradient id='bgBlue' x1='0' y1='0' x2='1' y2='1'>
+<stop offset='0' stop-color='#a9cbf0'/><stop offset='1' stop-color='#7aa9e0'/></linearGradient></defs>
+<rect width='360' height='360' fill='url(#bgBlue)'/>
+<g fill='none' stroke='#2a5aa8' stroke-opacity='0.55' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'>
+  <circle cx='40' cy='40' r='14'/><circle cx='35' cy='36' r='1.5' fill='#2a5aa8'/><circle cx='45' cy='36' r='1.5' fill='#2a5aa8'/>
+  <path d='M33 46 q7 5 14 0'/>
+  <rect x='100' y='20' width='26' height='42' rx='4'/><path d='M110 34 l4 4 8-8'/>
+  <path d='M160 20 q14-14 28 0 t28 0'/>
+  <path d='M240 30 h30 a4 4 0 0 1 4 4 v14 a4 4 0 0 1 -4 4 h-22 l-8 6 v-6 a4 4 0 0 1 -4 -4 v-14 a4 4 0 0 1 4 -4z'/>
+  <path d='M320 40 l6 12 12 2 -9 9 2 12 -11-6 -11 6 2-12 -9-9 12-2z'/>
+  <path d='M40 130 q0-16 12-16 t12 16 l3 8 h-30z'/><circle cx='52' cy='143' r='3'/>
+  <circle cx='120' cy='140' r='14'/><circle cx='115' cy='136' r='1.5' fill='#2a5aa8'/><circle cx='125' cy='136' r='1.5' fill='#2a5aa8'/>
+  <path d='M113 146 q7 6 14 0'/>
+  <path d='M200 130 l4 10 10 1 -8 7 2 10 -8-5 -8 5 2-10 -8-7 10-1z'/>
+  <rect x='260' y='120' width='40' height='30' rx='3'/><path d='M270 135 l10 8 10-8'/>
+  <circle cx='340' cy='135' r='14'/><circle cx='335' cy='131' r='1.5' fill='#2a5aa8'/><circle cx='345' cy='131' r='1.5' fill='#2a5aa8'/>
+  <path d='M333 141 q7 6 14 0'/>
+  <rect x='30' y='210' width='34' height='26' rx='3'/><circle cx='47' cy='223' r='5'/>
+  <path d='M90 220 a10 10 0 0 1 12 12'/><path d='M90 226 a5 5 0 0 1 6 6'/>
+  <path d='M140 210 q0-14 12-14 t12 14 l3 8 h-30z'/><circle cx='152' cy='223' r='3'/>
+  <path d='M200 215 v30 M190 230 h20'/><circle cx='260' cy='230' r='16'/><path d='M252 226 q8 8 16 0'/>
+  <path d='M300 210 h30 a4 4 0 0 1 4 4 v14 a4 4 0 0 1 -4 4 h-22 l-8 6 v-6 a4 4 0 0 1 -4 -4 v-14 a4 4 0 0 1 4 -4z'/>
+  <path d='M310 224 l4 4 8-8'/>
+  <circle cx='60' cy='320' r='14'/><path d='M54 316 q6 6 12 0'/>
+  <path d='M120 300 l4 10 10 1 -8 7 2 10 -8-5 -8 5 2-10 -8-7 10-1z'/>
+  <path d='M170 300 q14-14 28 0 t28 0'/>
+  <circle cx='250' cy='320' r='16'/><circle cx='245' cy='316' r='1.5' fill='#2a5aa8'/><circle cx='255' cy='316' r='1.5' fill='#2a5aa8'/>
+  <path d='M243 326 q7 6 14 0'/>
+  <path d='M300 300 h36 a4 4 0 0 1 4 4 v14 a4 4 0 0 1 -4 4 h-28 l-8 6 v-6 a4 4 0 0 1 -4 -4 v-14 a4 4 0 0 1 4 -4z'/>
+  <path d='M312 316 q6-8 12 0'/>
+</g>
+</svg>`;
+const svgCream = `<svg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'>
+<rect width='360' height='360' fill='#f4efe4'/>
+<g fill='none' stroke='#b8b0a0' stroke-opacity='0.55' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'>
+  <rect x='20' y='20' width='30' height='42' rx='4'/><path d='M28 30 l6 6 10-10'/>
+  <circle cx='100' cy='40' r='13'/><circle cx='95' cy='36' r='1.4' fill='#b8b0a0'/><circle cx='105' cy='36' r='1.4' fill='#b8b0a0'/>
+  <path d='M93 46 q7 6 14 0'/>
+  <path d='M160 20 q14-10 28 0 t28 0'/>
+  <path d='M230 20 h30 a4 4 0 0 1 4 4 v14 a4 4 0 0 1 -4 4 h-22 l-8 6 v-6 a4 4 0 0 1 -4 -4 v-14 a4 4 0 0 1 4 -4z'/>
+  <path d='M290 30 q0-10 10-10 t10 10 v6 h4 v22 h-28 v-22 h4z'/><path d='M300 30 v10'/>
+  <path d='M40 110 l10 18h-20z'/>
+  <path d='M80 120 h30 a4 4 0 0 1 4 4 v14 a4 4 0 0 1 -4 4 h-22 l-8 6 v-6 a4 4 0 0 1 -4 -4 v-14 a4 4 0 0 1 4 -4z'/>
+  <circle cx='160' cy='130' r='16'/><circle cx='155' cy='126' r='1.6' fill='#b8b0a0'/><circle cx='165' cy='126' r='1.6' fill='#b8b0a0'/>
+  <path d='M153 136 q7 6 14 0'/>
+  <path d='M220 110 q0-14 12-14 t12 14 l3 8 h-30z'/><circle cx='232' cy='123' r='3'/>
+  <path d='M290 130 a14 14 0 1 1 0 20'/>
+  <path d='M30 210 q0-16 12-16 t12 16 l3 8 h-30z'/><circle cx='42' cy='223' r='3'/>
+  <path d='M110 200 l12 0 M116 194 l0 12'/>
+  <path d='M170 200 l14 12 -14 12 -14-12z'/>
+  <circle cx='240' cy='210' r='14'/><path d='M240 200 v20 M230 210 h20'/>
+  <path d='M300 200 q0-10 10-10 t10 10 v6 h4 v22 h-28 v-22 h4z'/><path d='M310 200 v10'/>
+  <path d='M40 300 q14-14 28 0 t28 0'/>
+  <circle cx='120' cy='310' r='16'/><circle cx='115' cy='306' r='1.5' fill='#b8b0a0'/><circle cx='125' cy='306' r='1.5' fill='#b8b0a0'/>
+  <path d='M113 316 q7 6 14 0'/>
+  <path d='M180 300 h30 a4 4 0 0 1 4 4 v14 a4 4 0 0 1 -4 4 h-22 l-8 6 v-6 a4 4 0 0 1 -4 -4 v-14 a4 4 0 0 1 4 -4z'/>
+  <path d='M240 300 l6 12 12 2 -9 9 2 12 -11-6 -11 6 2-12 -9-9 12-2z'/>
+  <circle cx='310' cy='310' r='14'/><path d='M304 306 q6 6 12 0'/>
+</g>
+</svg>`;
+const svgNavy = `<svg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'>
+<defs><linearGradient id='bgNavy' x1='0' y1='0' x2='0' y2='1'>
+<stop offset='0' stop-color='#131c33'/><stop offset='1' stop-color='#0a1224'/></linearGradient></defs>
+<rect width='360' height='360' fill='url(#bgNavy)'/>
+<g fill='none' stroke='#53bdeb' stroke-opacity='0.16' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'>
+  <path d='M40 30 c-4-6-14-3-14 5 c0 6 14 14 14 14 s14-8 14-14 c0-8-10-11-14-5z'/>
+  <circle cx='130' cy='50' r='14'/><circle cx='125' cy='46' r='1.5' fill='#53bdeb'/><circle cx='135' cy='46' r='1.5' fill='#53bdeb'/>
+  <path d='M123 56 q7 6 14 0'/>
+  <path d='M200 20 q14-10 28 0 t28 0'/>
+  <path d='M290 30 h30 a4 4 0 0 1 4 4 v14 a4 4 0 0 1 -4 4 h-22 l-8 6 v-6 a4 4 0 0 1 -4 -4 v-14 a4 4 0 0 1 4 -4z'/>
+  <path d='M40 130 l10 18h-20z'/>
+  <circle cx='120' cy='140' r='16'/><path d='M120 124 v-8 M108 132 l-6-6 M132 132 l6-6'/>
+  <path d='M200 130 q14-14 28 0 t28 0'/>
+  <path d='M290 130 l6 12 12 2 -9 9 2 12 -11-6 -11 6 2-12 -9-9 12-2z'/>
+  <circle cx='50' cy='230' r='14'/><circle cx='45' cy='226' r='1.5' fill='#53bdeb'/><circle cx='55' cy='226' r='1.5' fill='#53bdeb'/>
+  <path d='M43 236 q7 6 14 0'/>
+  <path d='M120 210 l12 0 M126 204 l0 12'/>
+  <circle cx='180' cy='230' r='16'/><path d='M172 226 q8 8 16 0'/>
+  <path d='M230 200 l12 0 M236 194 l0 12'/>
+  <path d='M280 210 q0-16 12-16 t12 16 l3 8 h-30z'/><circle cx='292' cy='223' r='3'/>
+  <path d='M40 300 q14-14 28 0 t28 0'/>
+  <path d='M120 300 h34 a4 4 0 0 1 4 4 v14 a4 4 0 0 1 -4 4 h-26 l-8 6 v-6 a4 4 0 0 1 -4 -4 v-14 a4 4 0 0 1 4 -4z'/>
+  <circle cx='220' cy='310' r='14'/><path d='M212 310 q8 8 16 0'/>
+  <path d='M280 300 v30 M270 315 h20'/>
+</g>
+</svg>`;
+const svgMaze = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320' viewBox='0 0 320 320'>
+<rect width='320' height='320' fill='#ffffff'/>
+<g fill='none' stroke='#7cb56e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'>
+  <path d='M20 40 q10-20 30-10 t20 20'/><path d='M80 20 l30 4 -2 30 -26-4z'/>
+  <path d='M140 20 q20-4 24 12 t-10 22 q-20 0-22-14 t8-20z'/>
+  <path d='M200 30 q30-6 40 12 t-10 30'/><path d='M270 20 q20 0 24 18 t-14 24'/>
+  <path d='M20 100 q24-10 34 8 t-8 26 q-22 6-30-10 t4-24z'/>
+  <path d='M90 110 q30-14 42 6 t-10 30 q-28 6-36-12 t4-24z'/>
+  <path d='M160 100 q16-6 22 6 t-2 18 q-16 4-22-6 t2-18z'/>
+  <path d='M210 110 q22-8 30 8 t-6 24 q-22 4-28-10 t4-22z'/><path d='M280 100 q16-8 22 4 t-2 18'/>
+  <path d='M20 190 q20-10 30 6 t-6 24'/>
+  <path d='M90 180 q30-12 40 8 t-12 30 q-30 6-36-14 t8-24z'/>
+  <path d='M170 180 q18-6 24 6 t-4 20 q-18 4-22-8 t2-18z'/>
+  <path d='M230 190 q22-8 30 10 t-8 22 q-22 4-28-12 t6-20z'/><path d='M290 180 q14-4 18 8 t-4 14'/>
+  <path d='M20 260 q24-10 32 8 t-10 24 q-22 6-28-12 t6-20z'/>
+  <path d='M90 250 q18-6 24 8 t-4 20 q-18 4-24-8 t4-20z'/>
+  <path d='M150 250 q30-12 40 10 t-14 28 q-28 4-34-16 t8-22z'/>
+  <path d='M230 250 q18-6 24 8 t-4 20 q-18 4-22-8 t2-20z'/><path d='M290 260 q14-4 20 8 t-4 14'/>
+</g>
+</svg>`;
+
+const BACKGROUNDS = [
+  { id:'chalk', name:'Меловые дудлы',    style:`background-color:#1a1a1a; background-image:url("data:image/svg+xml,${encodeURIComponent(svgChalk)}"); background-repeat:repeat; background-size:360px 360px;` },
+  { id:'geo',   name:'Зелёная геометрия',style:`background-color:#ffffff; background-image:url("data:image/svg+xml,${encodeURIComponent(svgGeo)}"); background-repeat:repeat; background-size:240px 240px;` },
+  { id:'blobs', name:'Зелёные пятна',    style:`background-color:#f6f2e8; background-image:url("data:image/svg+xml,${encodeURIComponent(svgBlobs)}"); background-repeat:repeat; background-size:320px 320px;` },
+  { id:'blue',  name:'Голубые иконки',   style:`background-color:#9bc0e9; background-image:url("data:image/svg+xml,${encodeURIComponent(svgBlue)}"); background-repeat:repeat; background-size:360px 360px;` },
+  { id:'cream', name:'Кремовый узор',    style:`background-color:#f4efe4; background-image:url("data:image/svg+xml,${encodeURIComponent(svgCream)}"); background-repeat:repeat; background-size:360px 360px;` },
+  { id:'navy',  name:'Ночной синий',     style:`background-color:#0d1526; background-image:url("data:image/svg+xml,${encodeURIComponent(svgNavy)}"); background-repeat:repeat; background-size:360px 360px;` },
+  { id:'maze',  name:'Лабиринт',         style:`background-color:#ffffff; background-image:url("data:image/svg+xml,${encodeURIComponent(svgMaze)}"); background-repeat:repeat; background-size:320px 320px;` }
+];
+
+/* ============================================================
+   2. UI
+   ============================================================ */
+const messagesEl = document.getElementById('messages');
+const drawer = document.getElementById('drawer');
+const backdrop = document.getElementById('backdrop');
+const bgGrid = document.getElementById('bgGrid');
+const menuBtn = document.getElementById('menuBtn');
+const drawerClose = document.getElementById('drawerClose');
+const topbarClose = document.getElementById('topbarClose');
+const bgFolder = document.getElementById('bgFolder');
+const folderToggle = document.getElementById('folderToggle');
+const newChatBtn = document.getElementById('newChatBtn');
+const inviteBtn = document.getElementById('inviteBtn');
+const homeBtn = document.getElementById('homeBtn');
+const lockBtn = document.getElementById('lockBtn');
+const topTitle = document.getElementById('topTitle');
+const topSub = document.getElementById('topSub');
+
+function applyBackground(id) {
+  const bg = BACKGROUNDS.find(b => b.id === id) || BACKGROUNDS[0];
+  messagesEl.setAttribute('style', bg.style);
+  document.querySelectorAll('.bg-tile').forEach(t => t.classList.toggle('active', t.dataset.id === bg.id));
+  try { localStorage.setItem('voicechat_bg', bg.id); } catch (e) {}
+}
+function buildBgGrid() {
+  BACKGROUNDS.forEach(bg => {
+    const tile = document.createElement('div');
+    tile.className = 'bg-tile';
+    tile.dataset.id = bg.id;
+    const prev = document.createElement('div');
+    prev.className = 'bg-preview';
+    prev.setAttribute('style', bg.style);
+    prev.innerHTML = `<div class="mini-in"></div><div class="mini-out"></div>`;
+    const name = document.createElement('div');
+    name.className = 'bg-tile-name';
+    name.textContent = bg.name;
+    tile.appendChild(prev); tile.appendChild(name);
+    tile.addEventListener('click', () => applyBackground(bg.id));
+    bgGrid.appendChild(tile);
+  });
+}
+function openDrawer()  { drawer.classList.add('open'); backdrop.classList.add('open'); }
+function closeDrawer() { drawer.classList.remove('open'); backdrop.classList.remove('open'); }
+
+menuBtn.addEventListener('click', openDrawer);
+drawerClose.addEventListener('click', closeDrawer);
+backdrop.addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+folderToggle.addEventListener('click', () => {
+  const isOpen = bgFolder.classList.toggle('open');
+  folderToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+});
+buildBgGrid();
+let savedBg = null;
+try { savedBg = localStorage.getItem('voicechat_bg'); } catch(e) {}
+applyBackground(savedBg || 'chalk');
+
+/* ============================================================
+   2a. Копирование
+   ============================================================ */
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (e) {}
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) { return false; }
+}
+
+const copyUserIdBtn = document.getElementById('copyUserId');
+copyUserIdBtn.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  const ok = await copyToClipboard(USER_ID);
+  if (ok) {
+    copyUserIdBtn.classList.add('copied');
+    copyUserIdBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+    showHint('ID скопирован: ' + USER_ID);
+    setTimeout(() => {
+      copyUserIdBtn.classList.remove('copied');
+      copyUserIdBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
+    }, 1600);
+  } else showHint('Не удалось скопировать');
+});
+
+/* ============================================================
+   2b. HOME — вернуться в общий чат (кнопка в топбаре)
+   ============================================================ */
+homeBtn.addEventListener('click', () => {
+  if (currentRoomId === GENERAL_ROOM_ID) {
+    showHint('Вы уже в общем чате');
+    return;
+  }
+  persistRoom(GENERAL_ROOM_ID);
+  messagesEl.innerHTML = '<div class="date-divider">Сегодня</div>';
+  updateRoomUI();
+  setTimeout(() => {
+    createVoiceMessage({ src:null, duration:3.2, direction:'in',  waveform:generateWaveform(34,101) });
+    setTimeout(() => createVoiceMessage({ src:null, duration:1.7, direction:'out', waveform:generateWaveform(34,202) }), 350);
+    setTimeout(() => createVoiceMessage({ src:null, duration:5.4, direction:'in',  waveform:generateWaveform(34,303) }), 700);
+  }, 100);
+  showHint('Возврат в общий чат 🏠', 2000);
+});
+
+/* ============================================================
+   2c. LOCK — запомни мой ID (кнопка в топбаре)
+   ============================================================ */
+lockBtn.addEventListener('click', () => {
+  const currentlyRemembered = isIdRemembered();
+  const newState = !currentlyRemembered;
+  setRemembered(newState);
+
+  // Обновляем UI
+  lockBtn.classList.toggle('remembered', newState);
+  document.getElementById('userCard').classList.toggle('remembered', newState);
+
+  // Перезапускаем анимацию иконки
+  const svg = lockBtn.querySelector('svg');
+  svg.style.animation = 'none';
+  void svg.offsetWidth; // reflow
+  svg.style.animation = '';
+
+  // Показываем подсказку и вибрацию
+  if (newState) {
+    showHint('📌 ID запомнен: ' + USER_ID, 2600);
+    if (navigator.vibrate) navigator.vibrate([20, 30, 20]);
+  } else {
+    showHint('ID больше не закреплён', 2000);
+  }
+});
+
+/* ============================================================
+   2d. Приглашение в комнату
+   ============================================================ */
+inviteBtn.addEventListener('click', async () => {
+  const link = buildInviteLink(currentRoomId);
+  const ok = await copyToClipboard(link);
+  if (ok) showHint('Ссылка скопирована: ' + link, 3200);
+  else prompt('Скопируйте ссылку-приглашение:', link);
+});
+
+/* ============================================================
+   2e. Создать личный чат
+   ============================================================ */
+newChatBtn.addEventListener('click', () => {
+  persistRoom(USER_ID);
+  messagesEl.innerHTML = '<div class="date-divider">Сегодня</div>';
+  updateRoomUI();
+  closeDrawer();
+  const notice = document.createElement('div');
+  notice.className = 'join-notice';
+  notice.innerHTML = `
+    <svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-6 9h-3v3h-2v-3H6V9h3V6h2v3h3v2z"/></svg>
+    <span>Личный чат создан · комната ${USER_ID}</span>`;
+  messagesEl.appendChild(notice);
+  setTimeout(() => { notice.style.transition = 'opacity .3s'; notice.style.opacity = '0'; setTimeout(() => notice.remove(), 320); }, 3800);
+  showHint('Комната привязана к вашему ID ✨', 2600);
+});
+
+/* ============================================================
+   2f. Очистка чата
+   ============================================================ */
+topbarClose.addEventListener('click', () => {
+  const msgs = messagesEl.querySelectorAll('.msg, .typing, .join-notice');
+  if (msgs.length === 0) { showHint('Чат уже пуст'); return; }
+  msgs.forEach(m => { m.style.transition = 'opacity .2s ease, transform .2s ease'; m.style.opacity = '0'; m.style.transform = 'scale(.9)'; });
+  setTimeout(() => {
+    messagesEl.innerHTML = '<div class="date-divider">Сегодня</div>';
+    showHint('Чат очищен');
+  }, 220);
+});
+
+/* ============================================================
+   3. УТИЛИТЫ
+   ============================================================ */
+function formatTime(date = new Date()) {
+  return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+function formatDuration(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+function generateWaveform(count = 34, seed = null) {
+  const bars = [];
+  for (let i = 0; i < count; i++) {
+    let h;
+    if (seed !== null) {
+      const x = Math.sin(seed * (i + 1) * 12.9898) * 43758.5453;
+      h = 5 + (Math.abs(x) % 1) * 21;
+      h = h * 0.7 + (8 + Math.sin(i * 0.7 + seed * 0.001) * 6) * 0.3;
+    } else h = 5 + Math.random() * 21;
+    bars.push(Math.max(4, Math.min(26, h)));
+  }
+  return bars;
+}
+function showHint(text, dur = 2200) {
+  const hint = document.getElementById('hint');
+  hint.textContent = text;
+  hint.classList.add('show');
+  clearTimeout(hint._t);
+  hint._t = setTimeout(() => hint.classList.remove('show'), dur);
+}
+function scrollDown() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+/* ============================================================
+   4. УДАЛЕНИЕ
+   ============================================================ */
+let activeMenu = null;
+function closeMenu() { if (activeMenu) { activeMenu.remove(); activeMenu = null; } }
+
+function showMessageMenu(msg, x, y) {
+  closeMenu();
+  const menu = document.createElement('div');
+  menu.className = 'msg-menu';
+  menu.innerHTML = `
+    <button class="msg-menu-btn danger" data-action="delete">
+      <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+      <span>Удалить сообщение</span>
+    </button>`;
+  document.body.appendChild(menu);
+  activeMenu = menu;
+  const rect = menu.getBoundingClientRect();
+  const pad = 10;
+  let left = x, top = y;
+  if (left + rect.width + pad > window.innerWidth)  left = window.innerWidth - rect.width - pad;
+  if (top + rect.height + pad > window.innerHeight) top  = window.innerHeight - rect.height - pad;
+  if (left < pad) left = pad;
+  if (top < pad)  top = pad;
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+  menu.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    deleteMessage(msg);
+    closeMenu();
+  });
+  setTimeout(() => {
+    const onDocClick = (e) => {
+      if (activeMenu && !activeMenu.contains(e.target)) {
+        closeMenu();
+        document.removeEventListener('click', onDocClick);
+        document.removeEventListener('touchstart', onDocClick);
+      }
+    };
+    document.addEventListener('click', onDocClick);
+    document.addEventListener('touchstart', onDocClick);
+  }, 30);
+}
+
+function deleteMessage(msg) {
+  if (msg.classList.contains('deleted')) return;
+  const timeEl = msg.querySelector('.time');
+  let timeText = formatTime();
+  if (timeEl) {
+    for (const node of timeEl.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+        timeText = node.textContent.trim(); break;
+      }
+    }
+  }
+  const isOut = msg.classList.contains('out');
+  msg.classList.add('deleting');
+  setTimeout(() => {
+    msg.classList.remove('deleting');
+    msg.classList.add('deleted');
+    msg.classList.remove('in', 'out');
+    msg.innerHTML = `
+      <div class="deleted-content">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+        <span>Это сообщение удалено</span>
+      </div>
+      <span class="time">${timeText}${isOut ? '<span class="ticks">✓✓</span>' : ''}</span>`;
+  }, 180);
+}
+
+function attachDeleteHandlers(msg) {
+  let pressTimer = null;
+  let startX = 0, startY = 0, moved = false;
+  function startPress(e) {
+    if (msg.classList.contains('deleted')) return;
+    moved = false;
+    const pt = e.touches ? e.touches[0] : e;
+    startX = pt.clientX; startY = pt.clientY;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => {
+      if (!moved) {
+        showMessageMenu(msg, startX, startY);
+        if (navigator.vibrate) navigator.vibrate(15);
+      }
+    }, 500);
+  }
+  function cancelPress() { clearTimeout(pressTimer); }
+  function onMove(e) {
+    const pt = e.touches ? e.touches[0] : e;
+    if (Math.abs(pt.clientX - startX) > 8 || Math.abs(pt.clientY - startY) > 8) {
+      moved = true; cancelPress();
+    }
+  }
+  function onContext(e) {
+    if (msg.classList.contains('deleted')) return;
+    e.preventDefault();
+    const pt = e.touches ? e.touches[0] : e;
+    showMessageMenu(msg, pt.clientX, pt.clientY);
+  }
+  msg.addEventListener('mousedown', startPress);
+  msg.addEventListener('mouseup', cancelPress);
+  msg.addEventListener('mouseleave', cancelPress);
+  msg.addEventListener('mousemove', onMove);
+  msg.addEventListener('touchstart', startPress, { passive: true });
+  msg.addEventListener('touchend', cancelPress);
+  msg.addEventListener('touchcancel', cancelPress);
+  msg.addEventListener('touchmove', onMove, { passive: true });
+  msg.addEventListener('contextmenu', onContext);
+}
+
+/* ============================================================
+   5. ГОЛОСОВОЕ СООБЩЕНИЕ
+   ============================================================ */
+function createVoiceMessage({ src, duration, direction, waveform, timestamp }) {
+  const msg = document.createElement('div');
+  msg.className = `msg ${direction}`;
+  const bubble = document.createElement('div');
+  bubble.className = 'voice-bubble';
+  const playBtn = document.createElement('button');
+  playBtn.className = 'play-btn';
+  playBtn.innerHTML = `
+    <svg viewBox="0 0 24 24" class="icon-play"><path d="M8 5v14l11-7z"/></svg>
+    <svg viewBox="0 0 24 24" class="icon-pause" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>`;
+  const wave = document.createElement('div');
+  wave.className = 'waveform';
+  const bars = waveform || generateWaveform(34, Date.now());
+  const barEls = [];
+  bars.forEach(h => {
+    const b = document.createElement('div');
+    b.className = 'wave-bar';
+    b.style.height = h + 'px';
+    wave.appendChild(b);
+    barEls.push(b);
+  });
+  const info = document.createElement('div');
+  info.className = 'voice-info';
+  info.innerHTML = `
+    <svg class="mic-icon-mini" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.92V21h2v-3.08A7 7 0 0019 11h-2z"/></svg>
+    <span class="voice-duration">${formatDuration(duration)}</span>`;
+  bubble.appendChild(playBtn); bubble.appendChild(wave); bubble.appendChild(info);
+  const time = document.createElement('span');
+  time.className = 'time';
+  time.innerHTML = formatTime(timestamp || new Date()) +
+    (direction === 'out' ? '<span class="ticks">✓✓</span>' : '');
+  msg.appendChild(bubble); msg.appendChild(time);
+  messagesEl.appendChild(msg);
+  scrollDown();
+  attachDeleteHandlers(msg);
+
+  let audio = null, playing = false, animationFrame = null;
+  function setPlayedBars(p) {
+    const idx = Math.floor(p * barEls.length);
+    barEls.forEach((b, i) => b.classList.toggle('played', i < idx));
+  }
+  function resetBars() { barEls.forEach(b => b.classList.remove('played')); }
+  function updateProgress() {
+    if (!audio) return;
+    const p = audio.currentTime / audio.duration || 0;
+    setPlayedBars(p);
+    info.querySelector('.voice-duration').textContent =
+      formatDuration(Math.max(0, (audio.duration || duration) - audio.currentTime));
+    if (!audio.paused && !audio.ended) animationFrame = requestAnimationFrame(updateProgress);
+  }
+  function stopPlaying() {
+    if (audio) { audio.pause(); audio.currentTime = 0; }
+    playing = false;
+    cancelAnimationFrame(animationFrame);
+    resetBars();
+    info.querySelector('.voice-duration').textContent = formatDuration(duration);
+    playBtn.querySelector('.icon-play').style.display = '';
+    playBtn.querySelector('.icon-pause').style.display = 'none';
+  }
+  function togglePlay() {
+    if (!src) {
+      if (playing) { stopPlaying(); return; }
+      playing = true;
+      playBtn.querySelector('.icon-play').style.display = 'none';
+      playBtn.querySelector('.icon-pause').style.display = '';
+      const start = performance.now();
+      const tick = () => {
+        const elapsed = (performance.now() - start) / 1000;
+        const p = elapsed / duration;
+        if (p >= 1 || !playing) { stopPlaying(); return; }
+        setPlayedBars(p);
+        info.querySelector('.voice-duration').textContent = formatDuration(duration - elapsed);
+        animationFrame = requestAnimationFrame(tick);
+      };
+      tick();
+      return;
+    }
+    if (!audio) {
+      audio = new Audio(src);
+      audio.addEventListener('ended', stopPlaying);
+    }
+    if (audio.paused) {
+      document.querySelectorAll('audio').forEach(a => { if (a !== audio) a.pause(); });
+      audio.play();
+      playing = true;
+      playBtn.querySelector('.icon-play').style.display = 'none';
+      playBtn.querySelector('.icon-pause').style.display = '';
+      animationFrame = requestAnimationFrame(updateProgress);
+    } else {
+      audio.pause();
+      playing = false;
+      cancelAnimationFrame(animationFrame);
+      playBtn.querySelector('.icon-play').style.display = '';
+      playBtn.querySelector('.icon-pause').style.display = 'none';
+    }
+  }
+  playBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
+  wave.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (audio && audio.duration) {
+      const rect = wave.getBoundingClientRect();
+      audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+      updateProgress();
+    } else togglePlay();
+  });
+  return msg;
+}
+
+/* ============================================================
+   6. ЗАПИСЬ + ФИКСАЦИЯ ЧЕРЕЗ 5 СЕК
+   ============================================================ */
+const recordBtn = document.getElementById('recordBtn');
+const LOCK_AFTER_MS = 5000;
+
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+let recordStartTime = 0;
+let recordTimer = null;
+let analyser = null;
+let audioCtx = null;
+let persistentStream = null;
+let liveWaveRAF = null;
+let cancelled = false;
+let lockTimer = null;
+let locked = false;
+
+async function initMicrophone() {
+  if (persistentStream && persistentStream.active) return persistentStream;
+  try {
+    persistentStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    });
+    return persistentStream;
+  } catch (err) {
+    console.warn('Микрофон не инициализирован:', err);
+    return null;
+  }
+}
+initMicrophone().then(s => { if (!s) showHint('Разреши доступ к микрофону 🎤', 2600); });
+
+async function startRecording() {
+  if (isRecording) return;
+  cancelled = false;
+
+  if (!persistentStream || !persistentStream.active) await initMicrophone();
+  if (!persistentStream) { showHint('Микрофон недоступен'); return; }
+
+  isRecording = true;
+  audioChunks = [];
+  recordStartTime = Date.now();
+  locked = false;
+
+  let mimeType = '';
+  const candidates = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
+  for (const c of candidates) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(c)) { mimeType = c; break; }
+  }
+  try {
+    mediaRecorder = mimeType
+      ? new MediaRecorder(persistentStream, { mimeType })
+      : new MediaRecorder(persistentStream);
+  } catch (err) {
+    console.error(err);
+    showHint('Запись не поддерживается браузером');
+    isRecording = false;
+    return;
+  }
+  mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
+  mediaRecorder.start(100);
+
+  recordBtn.classList.add('recording');
+  recordBtn.classList.remove('locked');
+  recordBtn.innerHTML = `
+    <span class="rec-timer" id="recTimer">0:00</span>
+    <div class="live-wave" id="liveWave"></div>`;
+  const liveWave = document.getElementById('liveWave');
+  const LIVE_BARS = 22;
+  const liveBars = [];
+  for (let i = 0; i < LIVE_BARS; i++) {
+    const b = document.createElement('div');
+    b.className = 'live-bar';
+    b.style.height = '5px';
+    liveWave.appendChild(b);
+    liveBars.push(b);
+  }
+
+  const recTimer = document.getElementById('recTimer');
+  recordTimer = setInterval(() => {
+    const elapsed = (Date.now() - recordStartTime) / 1000;
+    recTimer.textContent = formatDuration(elapsed);
+  }, 100);
+
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(persistentStream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    (function drawLive() {
+      if (!isRecording) return;
+      analyser.getByteFrequencyData(dataArray);
+      const step = Math.floor(dataArray.length / LIVE_BARS);
+      for (let i = 0; i < LIVE_BARS; i++) {
+        let sum = 0;
+        for (let j = 0; j < step; j++) sum += dataArray[i * step + j];
+        const avg = sum / step;
+        const h = 5 + (avg / 255) * 18;
+        liveBars[i].style.height = h + 'px';
+      }
+      liveWaveRAF = requestAnimationFrame(drawLive);
+    })();
+  } catch (err) { console.warn('Визуализация недоступна', err); }
+
+  clearTimeout(lockTimer);
+  lockTimer = setTimeout(() => {
+    if (!isRecording) return;
+    locked = true;
+    recordBtn.classList.add('locked');
+    const recTimerEl = document.getElementById('recTimer');
+    if (recTimerEl && !recordBtn.querySelector('.lock-indicator')) {
+      const lockIcon = document.createElement('span');
+      lockIcon.className = 'lock-indicator';
+      lockIcon.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm3 12c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>';
+      recordBtn.insertBefore(lockIcon, recTimerEl);
+    }
+    showHint('🔒 Запись зафиксирована. Нажми чтобы отправить', 3500);
+    if (navigator.vibrate) navigator.vibrate([25, 40, 25]);
+  }, LOCK_AFTER_MS);
+
+  showHint('Идёт запись… Удержи 5 сек для фиксации', 1800);
+}
+
+function stopRecording(send = true) {
+  if (!isRecording) return;
+  isRecording = false;
+  locked = false;
+
+  clearInterval(recordTimer);
+  clearTimeout(lockTimer);
+  cancelAnimationFrame(liveWaveRAF);
+  lockTimer = null;
+
+  const duration = (Date.now() - recordStartTime) / 1000;
+  const mimeUsed = mediaRecorder.mimeType || 'audio/webm';
+
+  const finish = () => {
+    if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; }
+    analyser = null;
+
+    recordBtn.classList.remove('recording');
+    recordBtn.classList.remove('locked');
+    recordBtn.innerHTML = `
+      <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.92V21h2v-3.08A7 7 0 0019 11h-2z"/></svg>
+      <span>Нажми и запиши</span>`;
+
+    if (send && !cancelled && duration >= 0.4 && audioChunks.length > 0) {
+      const blob = new Blob(audioChunks, { type: mimeUsed });
+      const src = URL.createObjectURL(blob);
+      const waveform = generateWaveform(34, Date.now());
+      createVoiceMessage({ src, duration, direction: 'out', waveform });
+      simulateReply();
+    } else if (cancelled) showHint('Запись отменена');
+    else if (duration < 0.4) showHint('Слишком короткое сообщение');
+  };
+
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.onstop = finish;
+    try { mediaRecorder.stop(); } catch(e) { finish(); }
+  } else finish();
+}
+
+/* ============================================================
+   7. ИМИТАЦИЯ ОТВЕТА
+   ============================================================ */
+function simulateReply() {
+  setTimeout(() => {
+    const typing = document.createElement('div');
+    typing.className = 'typing';
+    typing.innerHTML = '<span></span><span></span><span></span>';
+    messagesEl.appendChild(typing);
+    scrollDown();
+    setTimeout(() => {
+      typing.remove();
+      const durations = [2.4, 4.1, 1.8, 3.5, 5.2, 2.1, 3.7];
+      const d = durations[Math.floor(Math.random() * durations.length)];
+      createVoiceMessage({
+        src: null, duration: d, direction: 'in',
+        waveform: generateWaveform(34, Date.now() + Math.random() * 1000)
+      });
+    }, 1600 + Math.random() * 1200);
+  }, 500 + Math.random() * 700);
+}
+
+/* ============================================================
+   8. КНОПКА ЗАПИСИ
+   ============================================================ */
+let pressTimer = null;
+
+function onPressStart(e) {
+  if (e.target.closest('.hamburger') || e.target.closest('.drawer') || e.target.closest('.topbar-close')
+      || e.target.closest('.home-btn') || e.target.closest('.lock-btn')) return;
+  e.preventDefault();
+  if (isRecording && locked) { stopRecording(true); return; }
+  if (isRecording) return;
+  pressTimer = setTimeout(startRecording, 180);
+}
+function onPressEnd(e) {
+  e.preventDefault();
+  clearTimeout(pressTimer);
+  if (isRecording && !locked) stopRecording(true);
+}
+function onPressCancel(e) {
+  clearTimeout(pressTimer);
+  if (isRecording && !locked) { cancelled = true; stopRecording(false); }
+}
+
+recordBtn.addEventListener('mousedown', onPressStart);
+recordBtn.addEventListener('touchstart', onPressStart, { passive: false });
+recordBtn.addEventListener('mouseup', onPressEnd);
+recordBtn.addEventListener('touchend', onPressEnd);
+recordBtn.addEventListener('mouseleave', onPressCancel);
+recordBtn.addEventListener('touchcancel', onPressCancel);
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !isRecording && e.target === document.body) {
+    e.preventDefault(); startRecording();
+  }
+  if (e.key === 'Escape') closeMenu();
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'Space' && isRecording && !locked) {
+    e.preventDefault(); stopRecording(true);
+  }
+});
+
+/* ============================================================
+   9. СТАРТ
+   ============================================================ */
+updateRoomUI();
+
+(function welcomeToRoom() {
+  if (currentRoomId === GENERAL_ROOM_ID) {
+    setTimeout(() => {
+      createVoiceMessage({ src:null, duration:3.2, direction:'in',  waveform:generateWaveform(34,101) });
+      setTimeout(() => createVoiceMessage({ src:null, duration:1.7, direction:'out', waveform:generateWaveform(34,202) }), 350);
+      setTimeout(() => createVoiceMessage({ src:null, duration:5.4, direction:'in',  waveform:generateWaveform(34,303) }), 700);
+    }, 250);
+  } else {
+    setTimeout(() => {
+      const notice = document.createElement('div');
+      notice.className = 'join-notice';
+      notice.innerHTML = `
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        <span>Вы вошли в комнату ${currentRoomId}</span>`;
+      messagesEl.appendChild(notice);
+      createVoiceMessage({ src:null, duration:2.5, direction:'in', waveform:generateWaveform(34, 777) });
+    }, 300);
+  }
+})();
+
+setTimeout(() => showHint('Зажми кнопку и говори 🎤'), 1200);
+setTimeout(() => showHint('🏠 — общий чат · 🔒 — запомнить ID'), 4500);
+</script>
+</body>
+</html>
