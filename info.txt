@@ -1,0 +1,14 @@
+voicechat/
+├── index.html
+├── css/
+│   └── styles.css
+└── js/
+    ├── app.js              ← главный модуль (точка входа)
+    ├── firebase-config.js  ← конфиг Firebase
+    ├── state.js            ← ID пользователя, комнаты
+    ├── utils.js            ← утилиты
+    ├── backgrounds.js      ← 7 фонов (SVG data)
+    ├── ui.js               ← отрисовка, меню, уведомления
+    ├── message.js          ← голосовой пузырь + плеер + удаление
+    ├── rtdb.js             ← Firebase Realtime Database
+    └── recorder.js         ← запись с микрофона
